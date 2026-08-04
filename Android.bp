@@ -130,6 +130,7 @@ android_library {
         "dynamiccolors",
         "com.android.text.flags-aconfig-java",
         "custom-preference",
+        "co.aospa.framework",
     ],
 
     plugins: [
