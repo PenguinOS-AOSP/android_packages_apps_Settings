@@ -5397,6 +5397,11 @@
             android:exported="false"
             android:permission="android.permission.DUMP" />
 
+        <service
+            android:name="com.android.settings.lockscreen.WallpaperSubjectExtractorService"
+            android:exported="false"
+            android:permission="android.permission.MANAGE_USERS" />
+
         <!-- Quick Settings tiles for Developer Options -->
         <service
             android:name=".development.qstile.DevelopmentTiles$ShowLayout"

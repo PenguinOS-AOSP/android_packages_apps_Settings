@@ -50,6 +50,9 @@ android_library {
         "SettingsLib-search-defaults",
         "SettingsLintDefaults",
         "SpaPrivilegedLib-defaults",
+// QTI_BEGIN: 2023-10-19: Bluetooth: Enable AOSP BT APEX
+//        "btadva_settings_java_defaults",
+// QTI_END: 2023-10-19: Bluetooth: Enable AOSP BT APEX
     ],
 
     srcs: [
@@ -59,13 +62,13 @@ android_library {
     exclude_srcs: [
         "src/com/android/settings/biometrics/fingerprint2/lib/**/*.kt",
     ],
-    javac_shard_size: 50,
     use_resource_processor: true,
     resource_dirs: [
         "res",
         "res-export", // for external usage
         "res-product",
     ],
+    asset_dirs: ["assets"],
     optional_uses_libs: ["com.android.extensions.appfunctions"],
     static_libs: [
         // External dependencies
@@ -131,6 +134,10 @@ android_library {
         "com.android.text.flags-aconfig-java",
         "custom-preference",
         "co.aospa.framework",
+        "tensorflowlite_java",
+        "tflite_support_java",
+        "tensorflow-lite-gpu",
+        "tensorflow-lite-gpu-api",
     ],
 
     plugins: [
@@ -150,6 +157,11 @@ android_library {
         "framework-virtualization.stubs.system",
         "telephony-common",
         "ims-common",
+        "telephony-ext",
+// QTI_BEGIN: 2021-06-08: Telephony: Add 5G network mode preference in Developer Options menu.
+        "extphonelib",
+// QTI_END: 2021-06-08: Telephony: Add 5G network mode preference in Developer Options menu.
+        "qti-telephony-utils",
     ],
     flags_packages: [
         "accessibility_flags",
@@ -212,6 +224,18 @@ android_app {
     uses_libs: ["org.apache.http.legacy"],
     use_resource_processor: true,
     resource_dirs: [],
+// QTI_BEGIN: 2021-06-08: Telephony: Add 5G network mode preference in Developer Options menu.
+    libs: [
+        "extphonelib"
+    ],
+// QTI_END: 2021-06-08: Telephony: Add 5G network mode preference in Developer Options menu.
+    jni_libs: [
+        "libtensorflowlite_jni",
+        "libtensorflowlite_gpu_jni",
+    ],
+    aaptflags: [
+        "-0 .tflite",
+    ],
     flags_packages: [
         "android.app.flags-aconfig",
     ],
