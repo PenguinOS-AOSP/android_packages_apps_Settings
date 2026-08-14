@@ -115,6 +115,7 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
     WifiTetherSecurityPreferenceController mSecurityPreferenceController;
     @VisibleForTesting
     WifiTetherAutoOffPreferenceController mWifiTetherAutoOffPreferenceController;
+    WifiTetherClientManagerPreferenceController mClientPrefController;
 
     private WifiManager mWifiManager;
     @VisibleForTesting
@@ -236,6 +237,7 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
         }
         mSecurityPreferenceController = use(WifiTetherSecurityPreferenceController.class);
         mPasswordPreferenceController = use(WifiTetherPasswordPreferenceController.class);
+        mClientPrefController = use(WifiTetherClientManagerPreferenceController.class);
 // QTI_BEGIN: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
         mApBandPreferenceController = use(WifiTetherApBandPreferenceController.class);
 // QTI_END: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
@@ -329,6 +331,7 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
         controllers.add(
                 new WifiTetherAutoOffPreferenceController(context, KEY_WIFI_TETHER_AUTO_OFF));
         controllers.add(new HotspotDataLimitEntryPreferenceController(context, KEY_HOTSPOT_DATA_LIMIT));
+        controllers.add(new WifiTetherClientManagerPreferenceController(context, listener));
         return controllers;
     }
 
