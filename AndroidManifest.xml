@@ -1,3 +1,21 @@
+<!-- Copyright (C) 2007 The Android Open Source Project
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools"
           package="com.android.settings"
@@ -134,6 +152,7 @@
     <uses-permission android:name="android.permission.READ_DREAM_STATE" />
     <uses-permission android:name="android.permission.READ_DREAM_SUPPRESSION" />
     <uses-permission android:name="android.permission.MANAGE_APP_HIBERNATION" />
+    <uses-permission android:name="com.qualcomm.qti.permission.USE_EXT_TELEPHONY_SERVICE" />
     <uses-permission android:name="android.permission.LAUNCH_MULTI_PANE_SETTINGS_DEEP_LINK" />
     <uses-permission android:name="android.permission.ALLOW_PLACE_IN_MULTI_PANE_SETTINGS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -183,6 +202,7 @@
             android:enableOnBackInvokedCallback="true">
 
         <uses-library android:name="org.apache.http.legacy" />
+        <uses-library android:name="com.qti.extphone.extphonelib"/>
 
 
         <property
@@ -308,7 +328,6 @@
             <intent-filter android:priority="1">
                 <action android:name="android.settings.WIRELESS_SETTINGS" />
                 <action android:name="android.settings.AIRPLANE_MODE_SETTINGS" />
-                <action android:name="com.android.settings.sim.SIM_SUB_INFO_SETTINGS" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
@@ -1739,6 +1758,50 @@
                        android:value="@string/menu_key_display"/>
             <meta-data android:name="com.android.settings.PRIMARY_PROFILE_CONTROLLED"
                 android:value="true" />
+        </activity>
+
+        <!-- Keep compatibility with old shortcuts. -->
+        <activity-alias android:name="DisplaySettings"
+                android:label="@string/display_settings"
+                android:exported="true"
+                android:targetActivity="Settings$DisplaySettingsActivity">
+            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
+                android:value="com.android.settings.DisplaySettings" />
+        </activity-alias>
+
+        <activity
+            android:name="Settings$SmartPixelsActivity"
+            android:label="@string/smart_pixels_title"
+            android:icon="@drawable/ic_homepage_display"
+            android:exported="true">
+            <intent-filter android:priority="1">
+                <action android:name="android.settings.SMART_PIXELS_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
+                android:value="com.android.settings.custom.smartpixel.SmartPixelsSettings" />
+        </activity>
+            <activity android:name="Settings$SMQQtiFeedbackActivity"
+                android:exported="true"
+                android:label="@string/qtifeedback_settings_title"
+                android:icon="@drawable/ic_settings_qti_feedback"
+                android:enabled="false"
+                android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter android:priority="250">
+                <action android:name="com.android.settings.action.SETTINGS" />
+            </intent-filter>
+            <meta-data android:name="com.android.settings.category"
+                android:value="com.android.settings.category.ia.system" />
+            <meta-data android:name="com.android.settings.FRAGMENT_CLASS"
+                android:value="@string/qtifeedback_intent_action" />
+            <meta-data android:name="com.android.settings.PRIMARY_PROFILE_CONTROLLED"
+                android:value="true" />
+            <meta-data android:name="com.android.settings.summary"
+                android:resource="@string/qtifeedback_settings_subtitle" />
         </activity>
 
         <activity
@@ -5926,6 +5989,24 @@
                   android:theme="@style/SettingsSudThemeGlif.Light">
         </activity>
 
+       <activity android:name=".network.telephony.UserPLMNListActivity"
+           android:exported="true"
+           android:label="@string/uplmn_settings_title"
+           android:configChanges="orientation|screenSize|keyboardHidden">
+           <intent-filter>
+               <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".network.telephony.UserPLMNEditorActivity"
+            android:exported="true"
+            android:label="@string/uplmn_settings_title"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name="Settings$OneHandedSettingsActivity"
             android:label="@string/one_handed_title"
@@ -6079,6 +6160,15 @@
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
             tools:node="remove" />
+
+        <receiver
+            android:name=".network.telephony.CiwlanNotificationReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.qti.phone.action.ACTION_DISABLE_CIWLAN_NOTIFICATION" />
+                <action android:name="org.codeaurora.intent.action.RADIO_POWER_STATE" />
+            </intent-filter>
+        </receiver>
 
         <activity
             android:name="com.android.settings.network.WepNetworkDialogActivity"
