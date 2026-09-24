@@ -45,6 +45,7 @@ import com.android.settings.accounts.AccountDashboardFragment;
 import com.android.settings.accounts.AccountSyncSettings;
 import com.android.settings.accounts.ChooseAccountFragment;
 import com.android.settings.accounts.ManagedProfileSettings;
+import com.android.settings.applications.RunningServices;
 import com.android.settings.applications.AppDashboardFragment;
 import com.android.settings.applications.AppStorageSettings;
 import com.android.settings.applications.ProcessStatsSummary;
@@ -364,6 +365,7 @@ public class SettingsGateway {
             ProcessStatsUi.class.getName(),
             AdvancedPowerUsageDetail.class.getName(),
             ProcessStatsSummary.class.getName(),
+            RunningServices.class.getName(),
             DrawOverlayDetails.class.getName(),
             WriteSettingsDetails.class.getName(),
             ExternalSourcesDetails.class.getName(),
