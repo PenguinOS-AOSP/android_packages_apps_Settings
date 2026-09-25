@@ -79,7 +79,6 @@
             settings:searchable="false" />
     </PreferenceCategory>
 
-
     <PreferenceCategory
         android:key="fast_pair_devices"
         android:title="@string/connected_device_previously_associated_fast_pair_device_title"

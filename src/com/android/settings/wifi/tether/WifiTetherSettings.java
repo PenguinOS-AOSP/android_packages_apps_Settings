@@ -19,9 +19,6 @@ package com.android.settings.wifi.tether;
 import static android.net.wifi.WifiManager.WIFI_AP_STATE_CHANGED_ACTION;
 import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for Dual Band (2G+5G) configuration from UI
-import static com.android.settings.wifi.tether.WifiTetherApBandPreferenceController.BAND_BOTH_2G_5G;
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for Dual Band (2G+5G) configuration from UI
 
 import static com.android.settings.wifi.WifiUtils.canShowWifiHotspot;
 
@@ -31,10 +28,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.SoftApConfiguration;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.UserManager;
-import android.util.FeatureFlagUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -44,7 +39,6 @@ import androidx.preference.Preference;
 
 import com.android.settings.R;
 import com.android.settings.SettingsActivity;
-import com.android.settings.core.FeatureFlags;
 import com.android.settings.dashboard.RestrictedDashboardFragment;
 import com.android.settings.overlay.FeatureFactory;
 import com.android.settings.search.BaseSearchIndexProvider;
@@ -67,15 +61,6 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
     private static final String TAG = "WifiTetherSettings";
     private static final IntentFilter TETHER_STATE_CHANGE_FILTER;
     private static final String KEY_WIFI_TETHER_SCREEN = "wifi_tether_settings_screen";
-// QTI_BEGIN: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
-    private static final int EXPANDED_CHILD_COUNT_WITH_SECURITY_NON = 3;
-// QTI_END: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
-// QTI_BEGIN: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-    private static boolean mWasApBand6GHzSelected = false;
-// QTI_END: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-// QTI_BEGIN: 2024-01-22: Android_UI: Avoid accessing AP Band preference controller when Wi-Fi Hotspot Speed Feature is enabled
-    boolean mShouldHidePreference;
-// QTI_END: 2024-01-22: Android_UI: Avoid accessing AP Band preference controller when Wi-Fi Hotspot Speed Feature is enabled
 
     @VisibleForTesting
     static final String KEY_WIFI_TETHER_NETWORK_NAME = "wifi_tether_network_name";
@@ -85,10 +70,6 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
     static final String KEY_WIFI_TETHER_NETWORK_PASSWORD = "wifi_tether_network_password";
     @VisibleForTesting
     static final String KEY_WIFI_TETHER_AUTO_OFF = "wifi_tether_auto_turn_off";
-    @VisibleForTesting
-// QTI_BEGIN: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
-    static final String KEY_WIFI_TETHER_NETWORK_AP_BAND = "wifi_tether_network_ap_band";
-// QTI_END: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
     @VisibleForTesting
     static final String KEY_WIFI_TETHER_MAXIMIZE_COMPATIBILITY =
             WifiTetherMaximizeCompatibilityPreferenceController.PREF_KEY;
@@ -108,23 +89,17 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
     WifiTetherSSIDPreferenceController mSSIDPreferenceController;
     @VisibleForTesting
     WifiTetherPasswordPreferenceController mPasswordPreferenceController;
-// QTI_BEGIN: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
-    private WifiTetherApBandPreferenceController mApBandPreferenceController;
-// QTI_END: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
     @VisibleForTesting
     WifiTetherSecurityPreferenceController mSecurityPreferenceController;
+    @VisibleForTesting
+    WifiTetherMaximizeCompatibilityPreferenceController mMaxCompatibilityPrefController;
     @VisibleForTesting
     WifiTetherAutoOffPreferenceController mWifiTetherAutoOffPreferenceController;
     WifiTetherClientManagerPreferenceController mClientPrefController;
 
-    private WifiManager mWifiManager;
     @VisibleForTesting
     boolean mUnavailable;
     private WifiRestriction mWifiRestriction;
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-    private boolean wasApBandPrefUpdated = false;
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-
     @VisibleForTesting
     TetherChangeReceiver mTetherChangeReceiver;
 
@@ -164,10 +139,6 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
-// QTI_BEGIN: 2024-01-22: Android_UI: Avoid accessing AP Band preference controller when Wi-Fi Hotspot Speed Feature is enabled
-        mShouldHidePreference = FeatureFactory.getFeatureFactory()
-                .getWifiFeatureProvider().getWifiHotspotRepository().isSpeedFeatureAvailable();
-// QTI_END: 2024-01-22: Android_UI: Avoid accessing AP Band preference controller when Wi-Fi Hotspot Speed Feature is enabled
         if (!canShowWifiHotspot(getContext())) {
             Log.e(TAG, "can not launch Wi-Fi hotspot settings"
                     + " because the config is not set to show.");
@@ -227,7 +198,6 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         mTetherChangeReceiver = new TetherChangeReceiver();
 
         if (!isCatalystEnabled()) {
@@ -237,10 +207,9 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
         }
         mSecurityPreferenceController = use(WifiTetherSecurityPreferenceController.class);
         mPasswordPreferenceController = use(WifiTetherPasswordPreferenceController.class);
+        mMaxCompatibilityPrefController =
+                use(WifiTetherMaximizeCompatibilityPreferenceController.class);
         mClientPrefController = use(WifiTetherClientManagerPreferenceController.class);
-// QTI_BEGIN: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
-        mApBandPreferenceController = use(WifiTetherApBandPreferenceController.class);
-// QTI_END: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
     }
 
     @Override
@@ -325,11 +294,9 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
         controllers.add(new WifiTetherSSIDPreferenceController(context, listener));
         controllers.add(new WifiTetherSecurityPreferenceController(context, listener));
         controllers.add(new WifiTetherPasswordPreferenceController(context, listener));
-// QTI_BEGIN: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
-        controllers.add(new WifiTetherApBandPreferenceController(context, listener));
-// QTI_END: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
         controllers.add(
                 new WifiTetherAutoOffPreferenceController(context, KEY_WIFI_TETHER_AUTO_OFF));
+        controllers.add(new WifiTetherMaximizeCompatibilityPreferenceController(context, listener));
         controllers.add(new HotspotDataLimitEntryPreferenceController(context, KEY_HOTSPOT_DATA_LIMIT));
         controllers.add(new WifiTetherClientManagerPreferenceController(context, listener));
         return controllers;
@@ -337,54 +304,10 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
 
     @Override
     public void onTetherConfigUpdated(AbstractPreferenceController context) {
-// QTI_BEGIN: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-        SoftApConfiguration config = buildNewConfig();
-// QTI_END: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
+        final SoftApConfiguration config = buildNewConfig();
         mPasswordPreferenceController.setSecurityType(config.getSecurityType());
 
         mWifiTetherViewModel.setSoftApConfiguration(config);
-
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-        if (mSecurityPreferenceController.isOweDualSapSupported()) {
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-            if (config.getSecurityType() == SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION
-                        || config.getSecurityType() == SoftApConfiguration.SECURITY_TYPE_WPA3_OWE) {
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-                mApBandPreferenceController.updatePreferenceEntries();
-                mApBandPreferenceController.updateDisplay();
-                wasApBandPrefUpdated = true;
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-// QTI_BEGIN: 2021-08-20: WLAN: wifi: correct code logic to update AP band preferences
-            } else if (wasApBandPrefUpdated
-// QTI_END: 2021-08-20: WLAN: wifi: correct code logic to update AP band preferences
-                   && (config.getSecurityType() != SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION
-                       && config.getSecurityType() != SoftApConfiguration.SECURITY_TYPE_WPA3_OWE)) {
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-                mApBandPreferenceController.updatePreferenceEntries();
-                mApBandPreferenceController.updateDisplay();
-                wasApBandPrefUpdated = false;
-            }
-        }
-
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-        if ((mApBandPreferenceController.getBandIndex() & SoftApConfiguration.BAND_6GHZ) != 0
-// QTI_BEGIN: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-                && (mWasApBand6GHzSelected == false)) {
-            mSecurityPreferenceController.updateDisplay();
-            mWasApBand6GHzSelected = true;
-            config = buildNewConfig();
-// QTI_END: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-            mPasswordPreferenceController.setSecurityType(config.getSecurityType());
-// QTI_BEGIN: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-            mWifiManager.setSoftApConfiguration(config);
-// QTI_END: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-        } else if ((mApBandPreferenceController.getBandIndex() & SoftApConfiguration.BAND_6GHZ) == 0
-// QTI_BEGIN: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
-                &&(mWasApBand6GHzSelected == true)) {
-            mSecurityPreferenceController.updateDisplay();
-            mWasApBand6GHzSelected = false;
-        }
-// QTI_END: 2021-08-18: WLAN: Remove none, wpa2-personal and wpa2/wpa3-personal security for 6GHz Band
     }
 
     @VisibleForTesting
@@ -418,68 +341,24 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
                 mWifiTetherViewModel.isSpeedFeatureAvailable()
                         ? currentConfig.getSecurityType()
                         : mSecurityPreferenceController.getSecurityType();
-// QTI_BEGIN: 2022-10-06: WLAN: HotSpot: Use OWE only mode with 6GHz band option
-        // For 6GHz use OWE only mode.
-        if ((mApBandPreferenceController.getBandIndex() & SoftApConfiguration.BAND_6GHZ) != 0
-                 && securityType == SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION) {
-            securityType = SoftApConfiguration.SECURITY_TYPE_WPA3_OWE;
+        String passphrase =
+                securityType == SoftApConfiguration.SECURITY_TYPE_OPEN
+                        ? null
+                        : mPasswordPreferenceController.getPasswordValidated(securityType);
+        configBuilder.setPassphrase(passphrase, securityType);
+        if (!mWifiTetherViewModel.isSpeedFeatureAvailable()) {
+            mMaxCompatibilityPrefController.setupMaximizeCompatibility(configBuilder);
         }
-
-// QTI_END: 2022-10-06: WLAN: HotSpot: Use OWE only mode with 6GHz band option
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-        if (securityType == SoftApConfiguration.SECURITY_TYPE_OPEN
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-// QTI_BEGIN: 2022-10-06: WLAN: HotSpot: Use updated SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION
-              || securityType == SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION
-              || securityType == SoftApConfiguration.SECURITY_TYPE_WPA3_OWE) {
-// QTI_END: 2022-10-06: WLAN: HotSpot: Use updated SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-            configBuilder.setPassphrase(null, securityType);
-        } else {
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-            configBuilder.setPassphrase(
-                    mPasswordPreferenceController.getPasswordValidated(securityType),
-                    securityType);
-        }
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for Dual Band (2G+5G) configuration from UI
-        if (mApBandPreferenceController.getBandIndex() == BAND_BOTH_2G_5G) {
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for Dual Band (2G+5G) configuration from UI
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-            // Fallback to 2G band if user selected OWE+Dual band
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-            if (securityType == SoftApConfiguration.SECURITY_TYPE_WPA3_OWE_TRANSITION
-                    || securityType == SoftApConfiguration.SECURITY_TYPE_WPA3_OWE) {
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-                configBuilder.setBand(SoftApConfiguration.BAND_2GHZ);
-            } else {
-                int[] dualBands = new int[] {
-                       SoftApConfiguration.BAND_2GHZ, SoftApConfiguration.BAND_5GHZ};
-                configBuilder.setBands(dualBands);
-            }
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for OWE Security for Softap Configuration.
-// QTI_BEGIN: 2024-01-22: Android_UI: Avoid accessing AP Band preference controller when Wi-Fi Hotspot Speed Feature is enabled
-        } else if (!mShouldHidePreference) {
-// QTI_END: 2024-01-22: Android_UI: Avoid accessing AP Band preference controller when Wi-Fi Hotspot Speed Feature is enabled
-// QTI_BEGIN: 2021-07-13: WLAN: Softap: Add support for Dual Band (2G+5G) configuration from UI
-            configBuilder.setBand(mApBandPreferenceController.getBandIndex());
-        }
-// QTI_END: 2021-07-13: WLAN: Softap: Add support for Dual Band (2G+5G) configuration from UI
         return configBuilder.build();
     }
 
     private void updateDisplayWithNewConfig() {
         if (!isCatalystEnabled()) {
-            use(WifiTetherSSIDPreferenceController.class)
-                    .updateDisplay();
+            use(WifiTetherSSIDPreferenceController.class).updateDisplay();
         }
-// QTI_BEGIN: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
-        use(WifiTetherSecurityPreferenceController.class)
-                .updateDisplay();
-        use(WifiTetherPasswordPreferenceController.class)
-                .updateDisplay();
-        use(WifiTetherApBandPreferenceController.class)
-                .updateDisplay();
-// QTI_END: 2021-05-18: WLAN: Revert "Smart Router settings UI changes"
+        use(WifiTetherSecurityPreferenceController.class).updateDisplay();
+        use(WifiTetherPasswordPreferenceController.class).updateDisplay();
+        use(WifiTetherMaximizeCompatibilityPreferenceController.class).updateDisplay();
     }
 
     @Override
@@ -521,7 +400,6 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
                 keys.add(KEY_WIFI_HOTSPOT_SECURITY);
                 keys.add(KEY_WIFI_TETHER_NETWORK_PASSWORD);
                 keys.add(KEY_WIFI_TETHER_AUTO_OFF);
-                keys.add(KEY_WIFI_TETHER_NETWORK_AP_BAND);
                 keys.add(KEY_WIFI_TETHER_MAXIMIZE_COMPATIBILITY);
                 keys.add(KEY_WIFI_HOTSPOT_SPEED);
                 keys.add(KEY_INSTANT_HOTSPOT);
@@ -549,10 +427,7 @@ public class WifiTetherSettings extends RestrictedDashboardFragment
             if (userManager == null || !userManager.isAdminUser()) {
                 return false;
             }
-            if (!WifiUtils.canShowWifiHotspot(context)) {
-                return false;
-            }
-            return !FeatureFlagUtils.isEnabled(context, FeatureFlags.TETHER_ALL_IN_ONE);
+            return WifiUtils.canShowWifiHotspot(context);
         }
 
         @Override
